@@ -8,13 +8,14 @@ class UniversityEmailRules
     public function university_email(string $value): bool 
     {
         $allowedDomains = ['iit.ac.lk'];
- 
-        $domain = strtolower(substr(strrchr($value, '@'), 1));
-
-        if (! in_array($domain, $allowedDomains)) {
+        
+        $atPosition = strrchr($value, '@');
+        if ($atPosition === false) {
             return false;
         }
+        
+        $domain = strtolower(substr($atPosition, 1));
 
-        return true;
+        return in_array($domain, $allowedDomains, true);
     }
 }

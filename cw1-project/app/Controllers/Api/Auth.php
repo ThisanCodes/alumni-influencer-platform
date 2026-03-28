@@ -11,13 +11,16 @@ class Auth extends ResourceController
     {
         $data = $this->request->getJSON(true);
 
-        $userModel = new UserModel();
-
-        if (!$userModel->validate($data)) {
-            return $this->failValidationErrors($userModel->errors());
+        if (!is_array($data) || empty($data)) {
+            return $this->fail('Invalid or missing JSON payload.', 400);
         }
 
+        $userModel = new UserModel();
+
         if (!$userModel->insert($data)) {
+            if ($userModel->errors()) {
+                return $this->failValidationErrors($userModel->errors());
+            }
             return $this->failServerError('Registration failed. Please try again.');
         }
 
@@ -25,7 +28,12 @@ class Auth extends ResourceController
 
         return $this->respondCreated([
             'message' => 'User registered successfully.',
-            'data'    => $user,
+            'data' => [
+                'id'         => $user['id'],
+                'email'      => $user['email'],
+                'created_at' => $user['created_at'],
+                'updated_at' => $user['updated_at'],
+            ],
         ]);
     }
 }
