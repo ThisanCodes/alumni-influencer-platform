@@ -11,6 +11,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
     $routes->post('auth/register', 'Auth::register');
     $routes->get('auth/verify-email', 'Auth::verifyEmail');
     $routes->post('auth/login', 'Auth::login');
+    $routes->post('auth/forgot-password', 'Auth::forgotPassword');
+    $routes->post('auth/reset-password', 'Auth::resetPassword');
 
     $routes->group('', ['filter' => 'jwtAuth'], function ($routes) {
         $routes->post('auth/logout', 'Auth::logout');         

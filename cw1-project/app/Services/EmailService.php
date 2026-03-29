@@ -29,4 +29,16 @@ class EmailService
 
         return $this->send($to, $subject, $message);
     }
+
+    public function sendPasswordResetEmail(string $to, string $token): bool
+    {
+        $resetUrl = base_url('api/auth/reset-password?token=' . urlencode($token));
+
+        $subject = 'Password Reset Request';
+        $message = "You requested a password reset. Please click the link below to reset your password:\n\n"
+            . $resetUrl
+            . "\n\nThis link expires in 1 hour. If you did not request this, please ignore this email.";
+
+        return $this->send($to, $subject, $message);
+    }
 }
