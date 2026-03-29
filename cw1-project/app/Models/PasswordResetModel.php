@@ -4,9 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class PersonalAccessTokenModel extends Model
+class PasswordResetModel extends Model
 {
-    protected $table = 'personal_access_tokens';
+    protected $table = 'password_resets';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
     protected $useSoftDeletes = false;
@@ -18,10 +18,15 @@ class PersonalAccessTokenModel extends Model
         'created_at',
     ];
 
-    protected $useTimestamps = false;
-
-    public function createToken(int $userId, string $token, string $expiresAt = '+24 hours'): string   
+    public function generateToken(): string
     {
+        return bin2hex(random_bytes(32));
+    }
+
+    public function createToken(int $userId, string $expiresAt = '+1 hour'): string
+    {
+        $token = $this->generateToken();
+
         $this->revokeToken($userId);
         
         $this->insert([
@@ -30,17 +35,12 @@ class PersonalAccessTokenModel extends Model
             'expires_at' => date('Y-m-d H:i:s', strtotime($expiresAt)),
             'created_at' => date('Y-m-d H:i:s'),
         ]);
-
+        
         return $token;
     }
 
-    public function revokeToken(string $token): bool
+    public function revokeToken($userId): void
     {
-        return (bool) $this->where('token', $token)->delete();
-    }
-
-    public function revokeAllForUser(int $userId): bool
-    {
-        return (bool) $this->where('user_id', $userId)->delete();
+        $this->where('user_id', $userId)->delete();
     }
 }
