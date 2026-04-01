@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Services\AuthService;
 use App\Services\JWTService;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
@@ -33,6 +34,13 @@ class JwtAuthFilter implements FilterInterface
                     'status' => false,
                     'message' => $result['message'],
                 ]);
+        }
+
+        if (isset($result['claims']) && is_array($result['claims'])) {
+            AuthService::setUser([
+                'id'    => $result['claims']['user_id'] ?? null,
+                'email' => $result['claims']['email'] ?? null,
+            ]);
         }
 
         return null;
