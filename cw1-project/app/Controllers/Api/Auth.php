@@ -133,7 +133,7 @@ class Auth extends ResourceController
         }
 
         $token = $this->jwtService->generateToken([
-            'sub' => (int) $user['id'],
+            'user_id' => (int) $user['id'],
             'email' => $user['email'],
         ]);
 
