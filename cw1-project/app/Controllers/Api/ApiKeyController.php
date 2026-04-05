@@ -41,6 +41,13 @@ class ApiKeyController extends ResourceController
 
         $expiresAt = $data['expires_at'] ?? null;
 
+        if ($expiresAt !== null) {
+            $parsed = strtotime($expiresAt);
+            if ($parsed === false || $parsed <= time()) {
+                return $this->failValidationErrors(['expires_at' => 'Invalid or past expiry. Use a future strtotime-compatible string, e.g. "+30 days".']);
+            }
+        }
+
         $result = $this->apiKeyModel->generateKey(
             $this->userId,
             $data['name'],

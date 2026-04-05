@@ -37,21 +37,21 @@ class ApiKeyModel extends Model
         $prefix = substr($rawKey, 0, 8);
 
         $this->insert([
-            'user_id'    => $userId,
-            'name'       => $name,
-            'key_hash'   => self::hashKey($rawKey),
+            'user_id' => $userId,
+            'name' => $name,
+            'key_hash' => self::hashKey($rawKey),
             'key_prefix' => $prefix,
-            'abilities'  => json_encode($abilities),
+            'abilities' => json_encode($abilities),
             'expires_at' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : null,
             'is_revoked' => false,
         ]);
 
         return [
-            'id'         => $this->getInsertID(),
-            'name'       => $name,
-            'key'        => $rawKey,
-            'prefix'     => $prefix,
-            'abilities'  => $abilities,
+            'id' => $this->getInsertID(),
+            'name' => $name,
+            'key' => $rawKey,
+            'prefix' => $prefix,
+            'abilities' => $abilities,
             'expires_at' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : null,
         ];
     }
@@ -100,7 +100,7 @@ class ApiKeyModel extends Model
 
         $totalRequests = $logModel->where('token_id', $keyId)
             ->where('user_id', $userId)
-            ->countAllResults(false);
+            ->countAllResults();
 
         $endpointBreakdown = $logModel->select('method, endpoint, COUNT(*) as hit_count')
             ->where('token_id', $keyId)

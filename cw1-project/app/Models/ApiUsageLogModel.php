@@ -40,7 +40,7 @@ class ApiUsageLogModel extends Model
 
     public function getUserStats(int $userId): array
     {
-        $totalRequests = $this->where('user_id', $userId)->countAllResults(false);
+        $totalRequests = $this->where('user_id', $userId)->countAllResults();
 
         $lastAccess = $this->where('user_id', $userId)
             ->orderBy('created_at', 'DESC')
