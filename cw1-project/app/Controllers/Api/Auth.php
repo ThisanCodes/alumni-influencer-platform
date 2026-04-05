@@ -6,19 +6,24 @@ use App\Models\UserModel;
 use App\Models\EmailVerificationModel;
 use App\Models\PasswordResetModel;
 use App\Models\PersonalAccessTokenModel;
+use App\Models\ApiUsageLogModel;
 use App\Services\EmailService;
 use App\Services\JWTService;
+use App\Traits\SanitizesInput;
+use App\Services\AuthService;
 use CodeIgniter\RESTful\ResourceController;
 use RuntimeException;
 
 class Auth extends ResourceController
 {
+    use SanitizesInput;
     protected UserModel $userModel;
     protected EmailVerificationModel $emailVerificationModel;
     protected PersonalAccessTokenModel $personalAccessTokenModel;
     protected PasswordResetModel $passwordResetModel;
     protected JWTService $jwtService;
     protected EmailService $emailService;
+    protected $userId;
 
     public function __construct()
     {
@@ -28,6 +33,7 @@ class Auth extends ResourceController
         $this->passwordResetModel = new PasswordResetModel();
         $this->jwtService = new JWTService();
         $this->emailService = new EmailService();
+        $this->userId = AuthService::getUserId();
     }
 
     public function register() 
@@ -37,6 +43,8 @@ class Auth extends ResourceController
         if (!is_array($data) || empty($data)) {
             return $this->fail('Invalid or missing JSON payload.', 400);
         }
+
+        $data = $this->sanitizeInput($data, ['password']);
 
         if (!$this->userModel->validate($data)) {
             return $this->failValidationErrors($this->userModel->errors());
@@ -77,10 +85,7 @@ class Auth extends ResourceController
             return $this->fail('Verification token is required.', 400);
         }
 
-        $verification = $this->emailVerificationModel
-            ->where('token', $token)
-            ->where('expires_at >=', date('Y-m-d H:i:s'))
-            ->first();
+        $verification = $this->emailVerificationModel->consumeToken($token);
 
         if (!$verification) {
             return $this->fail('Invalid or expired verification token.', 400);
@@ -91,8 +96,6 @@ class Auth extends ResourceController
         if (!$this->userModel->update($userId, ['is_verified' => true])) {
             return $this->failServerError('Could not verify email. Please try again.');
         }
-
-        $this->emailVerificationModel->revokeToken($userId);
 
         return $this->respond([
             'status' => true,
@@ -113,6 +116,8 @@ class Auth extends ResourceController
         if (!is_array($data) || empty($data)) {
             return $this->fail('Invalid or missing JSON payload.', 400);
         }
+
+        $data = $this->sanitizeInput($data, ['password']);
 
         if (empty($data['email']) || empty($data['password'])) {
             return $this->failValidationErrors([
@@ -139,6 +144,17 @@ class Auth extends ResourceController
 
         $this->personalAccessTokenModel->revokeAllForUser($user['id']);
         $this->personalAccessTokenModel->createToken((int) $user['id'], $token, '+24 hours');
+
+        $logModel = new ApiUsageLogModel();
+        $logModel->logRequest([
+            'user_id' => (int) $user['id'],
+            'token_id' => null,
+            'method' => $this->request->getMethod(),
+            'endpoint' => trim($this->request->getUri()->getPath(), '/'),
+            'ip_address' => $this->request->getIPAddress(),
+            'user_agent' => $this->request->getUserAgent()->getAgentString(),
+            'response_code' => 200,
+        ]);
 
         return $this->respond([
             'status' => true,
@@ -179,7 +195,6 @@ class Auth extends ResourceController
 
         return $this->respond([
             'status' => true,
-            'token' => $token,
             'message' => 'Logout successful.',
         ]);
     }
@@ -229,14 +244,7 @@ class Auth extends ResourceController
             return $this->fail('Token and new password are required.', 400);
         }
 
-        if (strlen($newPassword) < 8) {
-            return $this->fail('New password must be at least 8 characters long.', 400);
-        }
-
-        $reset = $this->passwordResetModel
-            ->where('token', $token)
-            ->where('expires_at >=', date('Y-m-d H:i:s'))
-            ->first();
+        $reset = $this->passwordResetModel->consumeToken($token);
 
         if (!$reset) {
             return $this->fail('Invalid or expired password reset token.', 400);
@@ -244,15 +252,35 @@ class Auth extends ResourceController
 
         $userId = $reset['user_id'];
 
-        if (!$this->userModel->update($userId, ['password' => password_hash($newPassword, PASSWORD_DEFAULT)])) {
+        if (!$this->userModel->update($userId, ['password' => $newPassword])) {
             return $this->failServerError('Could not reset password. Please try again.');
         }
 
-        $this->passwordResetModel->revokeToken($userId);
+        $this->personalAccessTokenModel->revokeAllForUser($userId);
 
         return $this->respond([
             'status' => true,
             'message' => 'Password reset successful. You can now log in with your new password.',
         ]);
     }
+
+    public function usageStats()
+    {
+        $logModel = new ApiUsageLogModel();
+
+        $stats = $logModel->getUserStats($this->userId);
+
+        return $this->respond([
+            'status' => true,
+            'data' => [
+                'total_api_requests' => $stats['total_requests'],
+                'last_api_access' => $stats['last_access'],
+                'endpoint_breakdown' => $stats['endpoint_breakdown'],
+                'recent_activity' => $stats['recent_activity'],
+                'login_history' => $logModel->getLoginHistory($this->userId),
+                'token_usage' => $logModel->getTokenUsageStats($this->userId),
+            ],
+        ]);
+    }
+
 }

@@ -4,10 +4,12 @@ namespace App\Controllers\Api;
 
 use App\Models\CertificationModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class CertificationController extends ResourceController
 {
+    use SanitizesInput;
     protected CertificationModel $certificationModel;
     protected $userId;
 
@@ -46,6 +48,7 @@ class CertificationController extends ResourceController
     public function create()
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $data['user_id'] = $this->userId;
 
@@ -63,6 +66,7 @@ class CertificationController extends ResourceController
     public function update($id = null)
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $certification = $this->certificationModel->findForUser($id, $this->userId);
 

@@ -1,0 +1,1063 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Alumni Influencer Platform API",
+    "description": "REST API for managing alumni profiles, credentials, bidding for Alumni of the Day, event participations, and API key management.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from the login endpoint"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Long-lived API key generated from the API Key Management endpoints"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "AlumniProfile": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "bio": { "type": "string", "nullable": true },
+          "linkedin_url": { "type": "string", "format": "uri", "nullable": true },
+          "profile_image": { "type": "string", "nullable": true },
+          "is_featured": { "type": "boolean" },
+          "appearance_count": { "type": "integer", "description": "Number of times featured as Alumni of the Day" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AlumniProfileInput": {
+        "type": "object",
+        "required": ["first_name", "last_name"],
+        "properties": {
+          "first_name": { "type": "string", "maxLength": 255 },
+          "last_name": { "type": "string", "maxLength": 255 },
+          "bio": { "type": "string" },
+          "linkedin_url": { "type": "string", "format": "uri" }
+        }
+      },
+      "FullProfile": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AlumniProfile" },
+          {
+            "type": "object",
+            "properties": {
+              "degrees": { "type": "array", "items": { "$ref": "#/components/schemas/Degree" } },
+              "certifications": { "type": "array", "items": { "$ref": "#/components/schemas/Certification" } },
+              "licences": { "type": "array", "items": { "$ref": "#/components/schemas/Licence" } },
+              "courses": { "type": "array", "items": { "$ref": "#/components/schemas/Course" } },
+              "employment_history": { "type": "array", "items": { "$ref": "#/components/schemas/EmploymentHistory" } },
+              "event_participations": { "type": "array", "items": { "$ref": "#/components/schemas/EventParticipation" } }
+            }
+          }
+        ]
+      },
+      "Degree": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "title": { "type": "string" },
+          "university": { "type": "string" },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "DegreeInput": {
+        "type": "object",
+        "required": ["title", "university", "completion_date"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 255 },
+          "university": { "type": "string", "maxLength": 255 },
+          "url": { "type": "string", "format": "uri" },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "Certification": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "name": { "type": "string" },
+          "issuing_organization": { "type": "string", "nullable": true },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "CertificationInput": {
+        "type": "object",
+        "required": ["name", "completion_date"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "issuing_organization": { "type": "string", "maxLength": 255 },
+          "url": { "type": "string", "format": "uri" },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "Licence": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "name": { "type": "string" },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "LicenceInput": {
+        "type": "object",
+        "required": ["name", "completion_date"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 200 },
+          "url": { "type": "string", "format": "uri" },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "Course": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "name": { "type": "string" },
+          "provider": { "type": "string" },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "CourseInput": {
+        "type": "object",
+        "required": ["name", "provider", "completion_date"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "provider": { "type": "string", "maxLength": 255 },
+          "url": { "type": "string", "format": "uri" },
+          "completion_date": { "type": "string", "format": "date" }
+        }
+      },
+      "EmploymentHistory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "company": { "type": "string" },
+          "role": { "type": "string" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date", "nullable": true },
+          "is_current": { "type": "boolean" }
+        }
+      },
+      "EmploymentHistoryInput": {
+        "type": "object",
+        "required": ["company", "role", "start_date"],
+        "properties": {
+          "company": { "type": "string", "maxLength": 255 },
+          "role": { "type": "string", "maxLength": 255 },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" },
+          "is_current": { "type": "boolean" }
+        }
+      },
+      "EventParticipation": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "event_name": { "type": "string" },
+          "event_date": { "type": "string", "format": "date" }
+        }
+      },
+      "EventParticipationInput": {
+        "type": "object",
+        "required": ["event_name", "event_date"],
+        "properties": {
+          "event_name": { "type": "string", "maxLength": 255 },
+          "event_date": { "type": "string", "format": "date" }
+        }
+      },
+      "Bid": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "slot_id": { "type": "integer" },
+          "amount": { "type": "number", "format": "float" },
+          "status": { "type": "integer", "description": "1 = ACTIVE, 2 = CANCELLED" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "BidInput": {
+        "type": "object",
+        "required": ["amount"],
+        "properties": {
+          "amount": { "type": "number", "format": "float", "minimum": 0.01 }
+        }
+      },
+      "MonthlyLimitStatus": {
+        "type": "object",
+        "properties": {
+          "wins_this_month": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "remaining": { "type": "integer" },
+          "label": { "type": "string", "example": "1/3" },
+          "limit_reached": { "type": "boolean" },
+          "event_bonus_applied": { "type": "boolean" }
+        }
+      },
+      "UsageStats": {
+        "type": "object",
+        "properties": {
+          "total_api_requests": { "type": "integer" },
+          "last_api_access": { "type": "string", "format": "date-time", "nullable": true },
+          "endpoint_breakdown": { "type": "array", "items": { "type": "object" } },
+          "recent_activity": { "type": "array", "items": { "type": "object" } },
+          "login_history": { "type": "array", "items": { "type": "object" } },
+          "token_usage": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "FeaturedAlumnus": {
+        "type": "object",
+        "properties": {
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "bio": { "type": "string", "nullable": true },
+          "linkedin_url": { "type": "string", "format": "uri", "nullable": true },
+          "profile_image": { "type": "string", "nullable": true }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "key_prefix": { "type": "string", "description": "First 8 characters of the key for identification" },
+          "abilities": { "type": "string" },
+          "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_used_at": { "type": "string", "format": "date-time", "nullable": true },
+          "is_revoked": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ApiKeyGenerated": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "key": { "type": "string", "description": "The full API key — only shown once at creation time" },
+          "prefix": { "type": "string" },
+          "abilities": { "type": "array", "items": { "type": "string" } },
+          "expires_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "ApiKeyInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "description": "A descriptive label for this key" },
+          "abilities": { "type": "array", "items": { "type": "string" }, "default": ["*"], "description": "Scopes/permissions for this key" },
+          "expires_at": { "type": "string", "description": "Expiry as a strtotime-compatible string, e.g. '+30 days', '+1 year'" }
+        }
+      },
+      "ApiKeyStats": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiKey" },
+          {
+            "type": "object",
+            "properties": {
+              "statistics": {
+                "type": "object",
+                "properties": {
+                  "total_requests": { "type": "integer" },
+                  "endpoint_breakdown": { "type": "array", "items": { "type": "object" } },
+                  "recent_requests": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/featured-alumnus": {
+      "get": {
+        "tags": ["Public"],
+        "summary": "Get today's featured alumnus",
+        "description": "Returns the profile of the currently featured Alumni of the Day. No authentication required.",
+        "responses": {
+          "200": {
+            "description": "Featured alumnus found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/FeaturedAlumnus" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "No featured alumnus today" }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["Public"],
+        "summary": "Access API documentation",
+        "description": "Renders the Swagger UI for interactive API documentation.",
+        "responses": {
+          "200": { "description": "Swagger UI HTML page" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user",
+        "description": "Creates a new user account with a university email. Sends a verification email.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "description": "Must be a university email (iit.ac.lk)" },
+                  "password": { "type": "string", "minLength": 8, "description": "Must contain uppercase, lowercase, digit, and special character" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Registration successful, verification email sent" },
+          "400": { "description": "Validation errors" }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Verify email address",
+        "description": "Verifies a user's email using a single-use token sent during registration.",
+        "parameters": [
+          { "name": "token", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Email verified successfully" },
+          "400": { "description": "Invalid or expired token" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticates a user and returns a JWT access token. Rate limited to 5 requests per minute.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "access_token": { "type": "string" },
+                            "expires_in": { "type": "integer", "example": 3600 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid credentials" },
+          "403": { "description": "Email not verified" },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout (revoke current token)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Logout successful" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request password reset",
+        "description": "Sends a password reset email if the account exists. Rate limited.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Generic success response (prevents user enumeration)" },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Reset password with token",
+        "description": "Resets the password using a single-use token. Revokes all active sessions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "new_password"],
+                "properties": {
+                  "token": { "type": "string" },
+                  "new_password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password reset successful" },
+          "400": { "description": "Invalid or expired token" },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/auth/usage-stats": {
+      "get": {
+        "tags": ["Usage Statistics"],
+        "summary": "View API usage statistics",
+        "description": "Returns login history, endpoint breakdown, per-token usage, and recent activity.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Usage statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/UsageStats" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "tags": ["API Key Management"],
+        "summary": "View API keys list",
+        "description": "Returns all API keys for the authenticated user, including revoked keys.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/ApiKey" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["API Key Management"],
+        "summary": "Generate API key",
+        "description": "Generates a new API key. The full key value is returned only once — store it securely.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/ApiKeyGenerated" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation errors" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api-keys/{id}/stats": {
+      "get": {
+        "tags": ["API Key Management"],
+        "summary": "View key statistics",
+        "description": "Returns usage statistics for a specific API key including total requests, endpoint breakdown, and recent activity.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/ApiKeyStats" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "API key not found" }
+        }
+      }
+    },
+    "/api-keys/{id}": {
+      "delete": {
+        "tags": ["API Key Management"],
+        "summary": "Revoke API key",
+        "description": "Revokes an API key, preventing further use.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "API key revoked" },
+          "404": { "description": "API key not found" },
+          "422": { "description": "Already revoked" }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "tags": ["Alumni Profile"],
+        "summary": "Get own profile",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/AlumniProfile" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Profile not found" }
+        }
+      },
+      "post": {
+        "tags": ["Alumni Profile"],
+        "summary": "Create profile",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AlumniProfileInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Profile created" },
+          "400": { "description": "Profile already exists or validation errors" }
+        }
+      }
+    },
+    "/profile/{id}": {
+      "put": {
+        "tags": ["Alumni Profile"],
+        "summary": "Update profile",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AlumniProfileInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profile updated" },
+          "404": { "description": "Profile not found" }
+        }
+      }
+    },
+    "/profile/upload-image": {
+      "post": {
+        "tags": ["Alumni Profile"],
+        "summary": "Upload profile image",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile_image": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Image uploaded" },
+          "400": { "description": "Invalid image" },
+          "404": { "description": "Profile not found" }
+        }
+      }
+    },
+    "/profile/full": {
+      "get": {
+        "tags": ["Alumni Profile"],
+        "summary": "Get full profile with all credentials",
+        "description": "Returns the profile along with degrees, certifications, licences, courses, employment history, and event participations.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Full profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/FullProfile" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Profile not found" }
+        }
+      }
+    },
+    "/degrees": {
+      "get": {
+        "tags": ["Degrees"],
+        "summary": "List all degrees",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": { "description": "List of degrees", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Degree" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Degrees"],
+        "summary": "Create a degree",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DegreeInput" } } } },
+        "responses": { "201": { "description": "Degree created" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/degrees/{id}": {
+      "get": {
+        "tags": ["Degrees"],
+        "summary": "Get a degree",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Degree data" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Degrees"],
+        "summary": "Update a degree",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DegreeInput" } } } },
+        "responses": { "200": { "description": "Degree updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Degrees"],
+        "summary": "Delete a degree",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Degree deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/certifications": {
+      "get": {
+        "tags": ["Certifications"],
+        "summary": "List all certifications",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": { "200": { "description": "List of certifications", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Certification" } } } } } } } }
+      },
+      "post": {
+        "tags": ["Certifications"],
+        "summary": "Create a certification",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CertificationInput" } } } },
+        "responses": { "201": { "description": "Certification created" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/certifications/{id}": {
+      "get": {
+        "tags": ["Certifications"],
+        "summary": "Get a certification",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Certification data" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Certifications"],
+        "summary": "Update a certification",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CertificationInput" } } } },
+        "responses": { "200": { "description": "Certification updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Certifications"],
+        "summary": "Delete a certification",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Certification deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/licences": {
+      "get": {
+        "tags": ["Licences"],
+        "summary": "List all licences",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": { "200": { "description": "List of licences", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Licence" } } } } } } } }
+      },
+      "post": {
+        "tags": ["Licences"],
+        "summary": "Create a licence",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LicenceInput" } } } },
+        "responses": { "201": { "description": "Licence created" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/licences/{id}": {
+      "get": {
+        "tags": ["Licences"],
+        "summary": "Get a licence",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Licence data" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Licences"],
+        "summary": "Update a licence",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LicenceInput" } } } },
+        "responses": { "200": { "description": "Licence updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Licences"],
+        "summary": "Delete a licence",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Licence deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List all courses",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": { "200": { "description": "List of courses", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Course" } } } } } } } }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a course",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CourseInput" } } } },
+        "responses": { "201": { "description": "Course created" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/courses/{id}": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get a course",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Course data" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Courses"],
+        "summary": "Update a course",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CourseInput" } } } },
+        "responses": { "200": { "description": "Course updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Courses"],
+        "summary": "Delete a course",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Course deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/employment-history": {
+      "get": {
+        "tags": ["Employment History"],
+        "summary": "List employment history",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": { "200": { "description": "List of employment records", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/EmploymentHistory" } } } } } } } }
+      },
+      "post": {
+        "tags": ["Employment History"],
+        "summary": "Create employment record",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmploymentHistoryInput" } } } },
+        "responses": { "201": { "description": "Employment record created" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/employment-history/{id}": {
+      "get": {
+        "tags": ["Employment History"],
+        "summary": "Get an employment record",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Employment record" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Employment History"],
+        "summary": "Update an employment record",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmploymentHistoryInput" } } } },
+        "responses": { "200": { "description": "Employment record updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Employment History"],
+        "summary": "Delete an employment record",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Employment record deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/event-participations": {
+      "get": {
+        "tags": ["Event Participations"],
+        "summary": "List event participations",
+        "description": "Participating in events grants +1 to the monthly Alumni of the Day win limit.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": { "200": { "description": "List of event participations", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/EventParticipation" } } } } } } } }
+      },
+      "post": {
+        "tags": ["Event Participations"],
+        "summary": "Record event participation",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventParticipationInput" } } } },
+        "responses": { "201": { "description": "Event participation recorded" }, "400": { "description": "Validation errors" } }
+      }
+    },
+    "/event-participations/{id}": {
+      "get": {
+        "tags": ["Event Participations"],
+        "summary": "Get an event participation",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Event participation data" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["Event Participations"],
+        "summary": "Update an event participation",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventParticipationInput" } } } },
+        "responses": { "200": { "description": "Event participation updated" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "tags": ["Event Participations"],
+        "summary": "Delete an event participation",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Event participation deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/bids": {
+      "post": {
+        "tags": ["Bidding"],
+        "summary": "Place a bid",
+        "description": "Place a bid on the currently active slot for Alumni of the Day. Status is forced to ACTIVE server-side.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BidInput" } } } },
+        "responses": {
+          "201": { "description": "Bid placed successfully" },
+          "400": { "description": "No active slot or validation errors" },
+          "422": { "description": "Already have an active bid for this slot" }
+        }
+      }
+    },
+    "/bids/{id}": {
+      "put": {
+        "tags": ["Bidding"],
+        "summary": "Update bid amount",
+        "description": "Increase the bid amount. New amount must be higher than current. Slot must still be active.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BidInput" } } } },
+        "responses": {
+          "200": { "description": "Bid updated" },
+          "400": { "description": "Amount required" },
+          "404": { "description": "Bid not found" },
+          "422": { "description": "Amount too low or slot inactive" }
+        }
+      }
+    },
+    "/bids/{id}/cancel": {
+      "post": {
+        "tags": ["Bidding"],
+        "summary": "Cancel a bid",
+        "description": "Cancels an active bid. Slot must still be active.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Bid cancelled" },
+          "404": { "description": "Bid not found" },
+          "422": { "description": "Already cancelled or slot inactive" }
+        }
+      }
+    },
+    "/bids/history": {
+      "get": {
+        "tags": ["Bidding"],
+        "summary": "Get bid history",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Bid history",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Bid" } } } } } }
+          }
+        }
+      }
+    },
+    "/bids/monthly-limit": {
+      "get": {
+        "tags": ["Bidding"],
+        "summary": "Get monthly win limit status",
+        "description": "Shows how many wins used this month, the limit (3 base + 1 if event participant), and remaining.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Monthly limit status",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/MonthlyLimitStatus" } } } } }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Public", "description": "Publicly accessible endpoints (no authentication)" },
+    { "name": "Authentication", "description": "User registration, login, email verification, and password management" },
+    { "name": "Usage Statistics", "description": "API usage statistics and activity tracking" },
+    { "name": "API Key Management", "description": "Generate, list, view statistics, and revoke long-lived API keys" },
+    { "name": "Alumni Profile", "description": "Alumni profile CRUD and image upload" },
+    { "name": "Degrees", "description": "Academic degree records" },
+    { "name": "Certifications", "description": "Professional certification records" },
+    { "name": "Licences", "description": "Professional licence records" },
+    { "name": "Courses", "description": "Course completion records" },
+    { "name": "Employment History", "description": "Employment history records" },
+    { "name": "Event Participations", "description": "University event participation records (affects monthly bid limit)" },
+    { "name": "Bidding", "description": "Alumni of the Day bidding system" }
+  ]
+}

@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\JwtAuthFilter;
+use App\Filters\ThrottleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -36,6 +37,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'jwtAuth'       => JwtAuthFilter::class,
+        'throttle'      => ThrottleFilter::class,
     ];
 
     /**
@@ -76,11 +78,13 @@ class Filters extends BaseFilters
         'before' => [
             // 'honeypot',
             // 'csrf',
-            // 'invalidchars',
+            'invalidchars',
+            'cors',
         ],
         'after' => [
             // 'honeypot',
-            // 'secureheaders',
+            'secureheaders',
+            'cors',
         ],
     ];
 
@@ -108,5 +112,14 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        'throttle' => [
+            'before' => [
+                'api/auth/login',
+                'api/auth/register',
+                'api/auth/forgot-password',
+                'api/auth/reset-password',
+            ],
+        ],
+    ];
 }

@@ -17,10 +17,11 @@ class UserModel extends Model
     protected $updatedField  = 'updated_at';
 
     protected $beforeInsert = ['hashPassword'];
+    protected $beforeUpdate = ['hashPassword'];
 
     protected $validationRules = [
         'email' => 'required|valid_email|university_email|is_unique[users.email]',
-        'password' => 'required|min_length[8]',
+        'password' => 'required|min_length[8]|regex_match[/[A-Z]/]|regex_match[/[a-z]/]|regex_match[/[0-9]/]|regex_match[/[^a-zA-Z0-9]/]',
     ];
 
     protected $validationMessages = [
@@ -33,6 +34,7 @@ class UserModel extends Model
         'password' => [
             'required' => 'Password is required.',
             'min_length' => 'Password must be at least 8 characters long.',
+            'regex_match' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
         ],
     ];
 
@@ -41,7 +43,8 @@ class UserModel extends Model
        if (isset($data['data']['password'])) {
             $data['data']['password'] = password_hash(
                 $data['data']['password'],
-                PASSWORD_BCRYPT
+                PASSWORD_BCRYPT,
+                ['cost' => 12]
             );
         }
 

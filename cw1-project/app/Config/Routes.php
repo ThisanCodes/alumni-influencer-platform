@@ -14,8 +14,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
     $routes->post('auth/forgot-password', 'Auth::forgotPassword');
     $routes->post('auth/reset-password', 'Auth::resetPassword');
 
+    $routes->get('featured-alumnus', 'PublicController::featuredAlumnus');
+    $routes->get('docs', 'DocsController::index');
+
     $routes->group('', ['filter' => 'jwtAuth'], function ($routes) {
         $routes->post('auth/logout', 'Auth::logout');
+        $routes->get('auth/usage-stats', 'Auth::usageStats');
+
+        $routes->get('api-keys', 'ApiKeyController::index');
+        $routes->post('api-keys', 'ApiKeyController::generate');
+        $routes->get('api-keys/(:num)/stats', 'ApiKeyController::stats/$1');
+        $routes->delete('api-keys/(:num)', 'ApiKeyController::revoke/$1');
 
         $routes->get('profile', 'AlumniProfileController::show');
         $routes->post('profile', 'AlumniProfileController::create');

@@ -57,7 +57,8 @@ class SelectWinner extends BaseCommand
         $selectedBid = null;
         foreach ($winningBid as $bid) {
             $bidderId = (int) $bid['user_id'];
-            $wins = $winnerModel->monthlyWinCount($bidderId);
+            $bidderProfile = $profileModel->where('user_id', $bidderId)->first();
+            $wins = (int) ($bidderProfile['appearance_count'] ?? 0);
             $limit = BidModel::MONTHLY_LIMIT;
             if ($eventModel->hasParticipatedThisMonth($bidderId)) {
                 $limit += 1;
@@ -89,12 +90,13 @@ class SelectWinner extends BaseCommand
             return;
         }
 
-        $profileModel->where('is_featured', 1)->set(['is_featured' => 0])->update();
+        $profileModel->where('is_featured', true)->set(['is_featured' => false])->update();
 
         $profile = $profileModel->where('user_id', $selectedBid['user_id'])->first();
         if ($profile) {
             $profileModel->update($profile['id'], [
-                'is_featured' => 1
+                'is_featured' => true,
+                'appearance_count' => ((int) ($profile['appearance_count'] ?? 0)) + 1,
             ]);
         }
 
