@@ -52,5 +52,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
         $routes->post('employment-history', 'EmploymentHistoryController::create');
         $routes->put('employment-history/(:num)', 'EmploymentHistoryController::update/$1');
         $routes->delete('employment-history/(:num)', 'EmploymentHistoryController::delete/$1');
+
+        $routes->get('event-participations', 'EventParticipationController::index');
+        $routes->get('event-participations/(:num)', 'EventParticipationController::show/$1');
+        $routes->post('event-participations', 'EventParticipationController::create');
+        $routes->put('event-participations/(:num)', 'EventParticipationController::update/$1');
+        $routes->delete('event-participations/(:num)', 'EventParticipationController::delete/$1');
+
+        $routes->post('bids', 'BidController::placeBid');
+        $routes->put('bids/(:num)', 'BidController::updateBid/$1');
+        $routes->post('bids/(:num)/cancel', 'BidController::cancelBid/$1');
+        $routes->get('bids/history', 'BidController::bidHistory');
+        $routes->get('bids/monthly-limit', 'BidController::monthlyLimitStatus');
     });
 });
