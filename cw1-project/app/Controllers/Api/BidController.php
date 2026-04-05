@@ -6,15 +6,19 @@ use App\Models\BidModel;
 use App\Models\BidSlotModel;
 use App\Models\BidWinnerModel;
 use App\Models\EventParticipationModel;
+use App\Models\AlumniProfileModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class BidController extends ResourceController
 {
+    use SanitizesInput;
     protected BidModel $bidModel;
     protected BidSlotModel $slotModel;
     protected BidWinnerModel $winnerModel;
     protected EventParticipationModel $eventModel;
+    protected AlumniProfileModel $profileModel;
     protected $userId;
 
     public function __construct()
@@ -23,6 +27,7 @@ class BidController extends ResourceController
         $this->slotModel = new BidSlotModel();
         $this->winnerModel = new BidWinnerModel();
         $this->eventModel = new EventParticipationModel();
+        $this->profileModel = new AlumniProfileModel();
         $this->userId = AuthService::getUserId();
     }
 
@@ -39,6 +44,7 @@ class BidController extends ResourceController
     public function placeBid()
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $activeSlot = $this->slotModel->getActiveSlot();
         if (!$activeSlot) {
@@ -142,7 +148,8 @@ class BidController extends ResourceController
 
     public function monthlyLimitStatus()
     {
-        $wins = $this->winnerModel->monthlyWinCount($this->userId);
+        $profile = $this->profileModel->forUser($this->userId)->first();
+        $wins = (int) ($profile['appearance_count'] ?? 0);
         $limit = $this->getMonthlyLimit();
         $hasEventBonus = $this->eventModel->hasParticipatedThisMonth($this->userId);
         $remaining = max(0, $limit - $wins);

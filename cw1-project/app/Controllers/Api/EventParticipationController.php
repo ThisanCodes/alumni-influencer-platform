@@ -4,10 +4,12 @@ namespace App\Controllers\Api;
 
 use App\Models\EventParticipationModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class EventParticipationController extends ResourceController
 {
+    use SanitizesInput;
     protected EventParticipationModel $eventModel;
     protected $userId;
 
@@ -33,6 +35,7 @@ class EventParticipationController extends ResourceController
     public function create()
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $data['user_id'] = $this->userId;
 
@@ -64,6 +67,7 @@ class EventParticipationController extends ResourceController
     public function update($id = null)
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $event = $this->eventModel->findForUser($id, $this->userId);
         

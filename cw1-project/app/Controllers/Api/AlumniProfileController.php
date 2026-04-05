@@ -7,18 +7,22 @@ use App\Models\CertificationModel;
 use App\Models\CourseModel;
 use App\Models\DegreeModel;
 use App\Models\EmploymentHistoryModel;
+use App\Models\EventParticipationModel;
 use App\Models\LicenceModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class AlumniProfileController extends ResourceController
 {
+    use SanitizesInput;
     protected AlumniProfileModel $profileModel;
     protected DegreeModel $degreeModel;
     protected CertificationModel $certificationModel;
     protected LicenceModel $licenceModel;
     protected CourseModel $courseModel;
     protected EmploymentHistoryModel $employmentModel;
+    protected EventParticipationModel $eventParticipationModel;
     protected $userId;
 
     public function __construct()
@@ -29,6 +33,7 @@ class AlumniProfileController extends ResourceController
         $this->licenceModel = new LicenceModel();
         $this->courseModel = new CourseModel();
         $this->employmentModel = new EmploymentHistoryModel();
+        $this->eventParticipationModel = new EventParticipationModel();
         $this->userId = AuthService::getUserId();
     }
 
@@ -50,7 +55,8 @@ class AlumniProfileController extends ResourceController
 
     public function create()
     {
-        $data   = $this->request->getJSON(true) ?? [];
+        $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $existing = $this->profileModel->forUser($this->userId)->first();
         if ($existing) {
@@ -72,7 +78,8 @@ class AlumniProfileController extends ResourceController
 
     public function update($profileId = null)
     {
-        $data   = $this->request->getJSON(true) ?? [];
+        $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $profile = $this->profileModel->findForUser($profileId, $this->userId);
 
@@ -161,6 +168,11 @@ class AlumniProfileController extends ResourceController
         $profile['employment_history'] = $this->employmentModel
             ->forUser($this->userId)
             ->orderBy('start_date', 'DESC')
+            ->findAll();
+
+        $profile['event_participations'] = $this->eventParticipationModel
+            ->forUser($this->userId)
+            ->orderBy('event_date', 'DESC')
             ->findAll();
 
         return $this->respond([

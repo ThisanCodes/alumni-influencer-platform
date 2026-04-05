@@ -4,10 +4,12 @@ namespace App\Controllers\Api;
 
 use App\Models\CourseModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class CourseController extends ResourceController
 {
+    use SanitizesInput;
     protected CourseModel $courseModel;
     protected $userId;
 
@@ -46,6 +48,7 @@ class CourseController extends ResourceController
     public function create()
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $data['user_id'] = $this->userId;
 
@@ -63,6 +66,7 @@ class CourseController extends ResourceController
     public function update($id = null)
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $course = $this->courseModel->findForUser($id, $this->userId);
 

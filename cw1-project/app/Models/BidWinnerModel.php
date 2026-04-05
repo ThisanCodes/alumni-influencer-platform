@@ -37,14 +37,4 @@ class BidWinnerModel extends Model
     {
         return $this->where('slot_id', $slotId)->countAllResults() > 0;
     }
-
-    public function monthlyWinCount(int $userId): int
-    {
-        return $this->db->table('bid_winners')
-            ->join('bids', 'bids.id = bid_winners.bid_id')
-            ->where('bids.user_id', $userId)
-            ->where('EXTRACT(MONTH FROM bid_winners.selected_at) =', date('n'), false)
-            ->where('EXTRACT(YEAR FROM bid_winners.selected_at) =', date('Y'), false)
-            ->countAllResults();
-    }
 }

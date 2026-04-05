@@ -4,10 +4,12 @@ namespace App\Controllers\Api;
 
 use App\Models\DegreeModel;
 use App\Services\AuthService;
+use App\Traits\SanitizesInput;
 use CodeIgniter\RESTful\ResourceController;
 
 class DegreeController extends ResourceController
 {
+    use SanitizesInput;
     protected DegreeModel $degreeModel;
     protected $userId;
 
@@ -47,6 +49,7 @@ class DegreeController extends ResourceController
     public function create()
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $data['user_id'] = $this->userId;
 
@@ -64,6 +67,7 @@ class DegreeController extends ResourceController
     public function update($id = null)
     {
         $data = $this->request->getJSON(true) ?? [];
+        $data = $this->sanitizeInput($data);
 
         $degree = $this->degreeModel->findForUser($id, $this->userId);
 

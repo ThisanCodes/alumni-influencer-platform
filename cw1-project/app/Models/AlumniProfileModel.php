@@ -8,7 +8,7 @@ class AlumniProfileModel extends BaseProfileModel
     protected $primaryKey = 'id';
     protected $allowedFields = [
         'user_id', 'first_name', 'last_name', 'bio', 'linkedin_url', 'profile_image',
-        'is_featured', 'created_at', 'updated_at',
+        'is_featured', 'appearance_count', 'created_at', 'updated_at',
     ];
     protected $useTimestamps = true;
     protected $returnType = 'array';
