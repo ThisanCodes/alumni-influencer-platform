@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
 class EventParticipationModel extends BaseProfileModel
 {
     protected $table = 'event_participations';

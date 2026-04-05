@@ -24,13 +24,23 @@ class CreateSlot extends BaseCommand
             return;
         }
 
+        $db = \Config\Database::connect();
+        $db->transStart();
+
         $bidSlotModel->where('is_active', 1)->set(['is_active' => 0])->update();
 
-        $bidSlotModel->insert([
+        $inserted = $bidSlotModel->insert([
             'name' => 'Alumni of the Day - ' . $tomorrow,
             'date' => $tomorrow,
             'is_active' => 1,
         ]);
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false || !$inserted) {
+            CLI::error('Failed to create bid slot for tomorrow. Transaction rolled back.');
+            return;
+        }
 
         CLI::write('Bid slot for tomorrow created successfully.');
     }

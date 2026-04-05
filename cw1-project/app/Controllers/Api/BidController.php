@@ -51,6 +51,7 @@ class BidController extends ResourceController
 
         $data['user_id'] = $this->userId;
         $data['slot_id'] = $activeSlot['id'];
+        $data['status'] = BidModel::STATUS['ACTIVE'];
 
         if (!$this->bidModel->insert($data)) {
             return $this->failValidationErrors($this->bidModel->errors(), 400);
@@ -77,6 +78,11 @@ class BidController extends ResourceController
 
         if ((int) $bid['status'] !== BidModel::STATUS['ACTIVE']) {
             return $this->fail('Only active bids can be updated.', 422);
+        }
+
+        $activeSlot = $this->slotModel->getActiveSlot();
+        if (!$activeSlot || (int) $bid['slot_id'] !== (int) $activeSlot['id']) {
+            return $this->fail('Bid cannot be updated because its slot is no longer active.', 422);
         }
 
         $newAmount = $data['amount'] ?? null;
@@ -109,6 +115,11 @@ class BidController extends ResourceController
 
         if ((int) $bid['status'] === BidModel::STATUS['CANCELLED']) {
             return $this->fail('Bid is already cancelled.', 422);
+        }
+
+        $activeSlot = $this->slotModel->getActiveSlot();
+        if (!$activeSlot || (int) $bid['slot_id'] !== (int) $activeSlot['id']) {
+            return $this->fail('Bid cannot be cancelled because its slot is no longer active.', 422);
         }
 
         if (!$this->bidModel->update($id, ['status' => BidModel::STATUS['CANCELLED']])) {

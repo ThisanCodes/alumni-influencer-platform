@@ -74,11 +74,20 @@ class SelectWinner extends BaseCommand
             return;
         }
 
-        $winnerModel->insert([
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $winnerInserted = $winnerModel->insert([
             'bid_id' => $selectedBid['id'],
             'slot_id' => $slot['id'],
             'selected_at' => date('Y-m-d H:i:s'),
         ]);
+
+        if (!$winnerInserted) {
+            $db->transRollback();
+            CLI::error('Failed to insert winner record. Transaction rolled back.');
+            return;
+        }
 
         $profileModel->where('is_featured', 1)->set(['is_featured' => 0])->update();
 
@@ -90,6 +99,13 @@ class SelectWinner extends BaseCommand
         }
 
         $slotModel->update($slot['id'], ['is_active' => 0]);
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            CLI::error('Transaction failed during winner selection. All changes rolled back.');
+            return;
+        }
 
         $allBids = $bidModel
             ->where('slot_id', $slot['id'])
