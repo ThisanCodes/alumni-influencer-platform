@@ -8,30 +8,36 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes) {
+    $routes->options('(:any)', static function () {
+        return service('response')->setStatusCode(204);
+    });
+
     $routes->post('auth/register', 'Auth::register');
     $routes->get('auth/verify-email', 'Auth::verifyEmail');
     $routes->post('auth/login', 'Auth::login');
     $routes->post('auth/forgot-password', 'Auth::forgotPassword');
     $routes->post('auth/reset-password', 'Auth::resetPassword');
 
-    $routes->get('featured-alumnus', 'PublicController::featuredAlumnus');
+    $routes->get('featured-alumnus', 'PublicController::featuredAlumnus', ['filter' => 'jwtAuth:api_key_only,ability_read_alumni_of_day']);
     $routes->get('docs', 'DocsController::index');
 
     $routes->group('', ['filter' => 'jwtAuth'], function ($routes) {
         $routes->post('auth/logout', 'Auth::logout');
         $routes->get('auth/usage-stats', 'Auth::usageStats');
+    });
 
+    $routes->group('', ['filter' => 'jwtAuth'], function ($routes) {
         $routes->get('api-keys', 'ApiKeyController::index');
         $routes->post('api-keys', 'ApiKeyController::generate');
         $routes->get('api-keys/(:num)/stats', 'ApiKeyController::stats/$1');
         $routes->delete('api-keys/(:num)', 'ApiKeyController::revoke/$1');
+    });
 
+    $routes->group('', ['filter' => 'jwtAuth'], function ($routes) {
         $routes->get('profile', 'AlumniProfileController::show');
         $routes->post('profile', 'AlumniProfileController::create');
         $routes->put('profile/(:num)', 'AlumniProfileController::update/$1');
         $routes->post('profile/upload-image', 'AlumniProfileController::uploadImage');
-        $routes->get('profile/full', 'AlumniProfileController::fullProfile');
-
         $routes->get('degrees', 'DegreeController::index');
         $routes->get('degrees/(:num)', 'DegreeController::show/$1');
         $routes->post('degrees', 'DegreeController::create');
@@ -73,5 +79,21 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function ($routes)
         $routes->post('bids/(:num)/cancel', 'BidController::cancelBid/$1');
         $routes->get('bids/history', 'BidController::bidHistory');
         $routes->get('bids/monthly-limit', 'BidController::monthlyLimitStatus');
+    });
+
+    $routes->group('', ['filter' => 'jwtAuth:api_key_only,ability_read_alumni'], function ($routes) {
+        $routes->get('profile/full', 'AlumniProfileController::fullProfile');
+        $routes->get('profile/all', 'AlumniProfileController::allProfiles');
+        $routes->get('profile/filter-options', 'AlumniProfileController::filterOptions');
+    });
+
+    $routes->group('analytics', ['filter' => 'jwtAuth:api_key_only,ability_read_analytics'], function ($routes) {
+        $routes->get('kpi', 'AnalyticsController::kpi');
+        $routes->get('alumni-by-programme', 'AnalyticsController::programme');
+        $routes->get('certifications-over-time', 'AnalyticsController::certificationsTrend');
+        $routes->get('curriculum-skills-gap-by-programme', 'AnalyticsController::curriculumSkillsGapByProgramme');
+        $routes->get('top-employers', 'AnalyticsController::employment');
+        $routes->get('job-titles', 'AnalyticsController::jobTitles');
+        $routes->get('graduation-trends', 'AnalyticsController::graduation');
     });
 });

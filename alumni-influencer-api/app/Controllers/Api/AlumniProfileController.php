@@ -116,8 +116,13 @@ class AlumniProfileController extends ResourceController
             return $this->failValidationErrors(['profile_image' => 'Only JPEG and PNG images are allowed.']);
         }
 
+        $uploadPath = FCPATH . 'uploads/profile_images';
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0775, true);
+        }
+
         $newName = $file->getRandomName();
-        if (!$file->move(WRITEPATH . 'uploads/profile_images', $newName)) {
+        if (!$file->move($uploadPath, $newName)) {
             return $this->failServerError('Could not move uploaded file.');
         }
 
@@ -137,8 +142,13 @@ class AlumniProfileController extends ResourceController
 
     public function fullProfile()
     {
+        $requestedUserId = (int) ($this->request->getGet('user_id') ?? 0);
+        $targetUserId = $requestedUserId > 0 ? $requestedUserId : (int) $this->userId;
+
         $profile = $this->profileModel
-            ->forUser($this->userId)
+            ->select('alumni_profiles.*, users.email')
+            ->join('users', 'users.id = alumni_profiles.user_id', 'left')
+            ->forUser($targetUserId)
             ->first();
 
         if (!$profile) {
@@ -146,38 +156,59 @@ class AlumniProfileController extends ResourceController
         }
 
         $profile['degrees'] = $this->degreeModel
-            ->forUser($this->userId)
+            ->forUser($targetUserId)
             ->orderBy('completion_date', 'DESC')
             ->findAll();
 
         $profile['certifications'] = $this->certificationModel
-            ->where('user_id', $this->userId)
+            ->where('user_id', $targetUserId)
             ->orderBy('completion_date', 'DESC')
             ->findAll();
 
         $profile['licences'] = $this->licenceModel
-            ->forUser($this->userId)
+            ->forUser($targetUserId)
             ->orderBy('completion_date', 'DESC')
             ->findAll();
 
         $profile['courses'] = $this->courseModel
-            ->forUser($this->userId)
+            ->forUser($targetUserId)
             ->orderBy('completion_date', 'DESC')
             ->findAll();
 
         $profile['employment_history'] = $this->employmentModel
-            ->forUser($this->userId)
+            ->forUser($targetUserId)
             ->orderBy('start_date', 'DESC')
             ->findAll();
 
         $profile['event_participations'] = $this->eventParticipationModel
-            ->forUser($this->userId)
+            ->forUser($targetUserId)
             ->orderBy('event_date', 'DESC')
             ->findAll();
 
         return $this->respond([
             'status' => true,
             'data'   => $profile,
+        ]);
+    }
+
+    public function allProfiles()
+    {
+        return $this->respond([
+            'status' => true,
+            'data' => $this->profileModel->findSummaries([
+                'search' => $this->request->getGet('search'),
+                'programme' => $this->request->getGet('programme'),
+                'graduation_year' => $this->request->getGet('graduation_year'),
+                'industry' => $this->request->getGet('industry'),
+            ]),
+        ]);
+    }
+
+    public function filterOptions()
+    {
+        return $this->respond([
+            'status' => true,
+            'data' => $this->profileModel->findFilterOptions(),
         ]);
     }
 }

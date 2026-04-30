@@ -64,6 +64,13 @@ class ApiKeyModel extends Model
             ->findAll();
     }
 
+    public function getAllKeys(): array
+    {
+        return $this->select('id, user_id, name, key_prefix, abilities, expires_at, last_used_at, is_revoked, created_at')
+            ->orderBy('created_at', 'DESC')
+            ->findAll();
+    }
+
     public function getActiveKeysForUser(int $userId): array
     {
         return $this->select('id, name, key_prefix, abilities, expires_at, last_used_at, created_at')
@@ -77,20 +84,29 @@ class ApiKeyModel extends Model
             ->findAll();
     }
 
-    public function revokeKey(int $keyId, int $userId): bool
+    public function revokeKey(int $keyId, ?int $userId = null): bool
     {
-        return (bool) $this->where('id', $keyId)
-            ->where('user_id', $userId)
+        $builder = $this->where('id', $keyId);
+
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+
+        return (bool) $builder
             ->set(['is_revoked' => true])
             ->update();
     }
 
-    public function getKeyStats(int $keyId, int $userId): ?array
+    public function getKeyStats(int $keyId, ?int $userId = null): ?array
     {
-        $key = $this->select('id, name, key_prefix, abilities, expires_at, last_used_at, is_revoked, created_at')
-            ->where('id', $keyId)
-            ->where('user_id', $userId)
-            ->first();
+        $keyBuilder = $this->select('id, user_id, name, key_prefix, abilities, expires_at, last_used_at, is_revoked, created_at')
+            ->where('id', $keyId);
+
+        if ($userId !== null) {
+            $keyBuilder->where('user_id', $userId);
+        }
+
+        $key = $keyBuilder->first();
 
         if (!$key) {
             return null;
@@ -98,21 +114,35 @@ class ApiKeyModel extends Model
 
         $logModel = new ApiUsageLogModel();
 
-        $totalRequests = $logModel->where('token_id', $keyId)
-            ->where('user_id', $userId)
-            ->countAllResults();
+        $totalRequestsBuilder = $logModel->where('token_id', $keyId);
+
+        if ($userId !== null) {
+            $totalRequestsBuilder->where('user_id', $userId);
+        }
+
+        $totalRequests = $totalRequestsBuilder->countAllResults();
 
         $endpointBreakdown = $logModel->select('method, endpoint, COUNT(*) as hit_count')
-            ->where('token_id', $keyId)
-            ->where('user_id', $userId)
+            ->where('token_id', $keyId);
+
+        if ($userId !== null) {
+            $endpointBreakdown->where('user_id', $userId);
+        }
+
+        $endpointBreakdown = $endpointBreakdown
             ->groupBy('method, endpoint')
             ->orderBy('hit_count', 'DESC')
             ->findAll();
 
         $recentRequests = $logModel->where('token_id', $keyId)
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->limit(20)
+            ->orderBy('created_at', 'DESC');
+
+        if ($userId !== null) {
+            $recentRequests->where('user_id', $userId);
+        }
+
+        $recentRequests = $recentRequests
+            ->limit(10)
             ->findAll();
 
         $key['statistics'] = [

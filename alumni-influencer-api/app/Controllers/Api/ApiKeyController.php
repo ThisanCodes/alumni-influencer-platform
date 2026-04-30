@@ -64,7 +64,7 @@ class ApiKeyController extends ResourceController
 
     public function index()
     {
-        $keys = $this->apiKeyModel->getKeysForUser($this->userId);
+        $keys = $this->apiKeyModel->getAllKeys();
 
         return $this->respond([
             'status' => true,
@@ -78,7 +78,7 @@ class ApiKeyController extends ResourceController
             return $this->fail('API key ID is required.', 400);
         }
 
-        $stats = $this->apiKeyModel->getKeyStats((int) $id, $this->userId);
+        $stats = $this->apiKeyModel->getKeyStats((int) $id);
 
         if (!$stats) {
             return $this->failNotFound('API key not found.');
@@ -98,22 +98,26 @@ class ApiKeyController extends ResourceController
 
         $key = $this->apiKeyModel
             ->where('id', (int) $id)
-            ->where('user_id', $this->userId)
             ->first();
 
         if (!$key) {
             return $this->failNotFound('API key not found.');
         }
 
-        if ($key['is_revoked']) {
+        if ($this->isRevoked($key['is_revoked'] ?? false)) {
             return $this->fail('API key is already revoked.', 422);
         }
 
-        $this->apiKeyModel->revokeKey((int) $id, $this->userId);
+        $this->apiKeyModel->revokeKey((int) $id);
 
         return $this->respond([
             'status'  => true,
             'message' => 'API key revoked successfully.',
         ]);
+    }
+
+    private function isRevoked($value): bool
+    {
+        return $value === true || $value === 1 || $value === '1' || $value === 't' || $value === 'true';
     }
 }

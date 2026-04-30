@@ -53,6 +53,7 @@ class Auth extends ResourceController
         if (!$this->userModel->insert([
             'email' => $data['email'],
             'password' => $data['password'],
+            'role' => $data['role'] ?? 'alumni',
             'is_verified' => false,
         ])) {
             if ($this->userModel->errors()) {
@@ -140,6 +141,7 @@ class Auth extends ResourceController
         $token = $this->jwtService->generateToken([
             'user_id' => (int) $user['id'],
             'email' => $user['email'],
+            'role' => $user['role'] ?? 'alumni',
         ]);
 
         $this->personalAccessTokenModel->revokeAllForUser($user['id']);
@@ -163,6 +165,7 @@ class Auth extends ResourceController
                 'user' => [
                     'id' => (int) $user['id'],
                     'email' => $user['email'],
+                    'role' => $user['role'] ?? 'alumni',
                 ],
                 'tokens' => [
                     'access_token' => $token,

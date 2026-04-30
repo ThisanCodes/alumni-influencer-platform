@@ -8,7 +8,7 @@ class UserModel extends Model
 {
     protected $table            = 'users';
     protected $primaryKey       = 'id';
-    protected $allowedFields    = ['email', 'password', 'is_verified'];
+    protected $allowedFields    = ['email', 'password', 'role', 'is_verified'];
 
     // Dates
     protected $useTimestamps = true;
@@ -22,6 +22,7 @@ class UserModel extends Model
     protected $validationRules = [
         'email' => 'required|valid_email|university_email|is_unique[users.email]',
         'password' => 'required|min_length[8]|regex_match[/[A-Z]/]|regex_match[/[a-z]/]|regex_match[/[0-9]/]|regex_match[/[^a-zA-Z0-9]/]',
+        'role' => 'permit_empty|in_list[alumni,university]',
     ];
 
     protected $validationMessages = [
@@ -35,6 +36,9 @@ class UserModel extends Model
             'required' => 'Password is required.',
             'min_length' => 'Password must be at least 8 characters long.',
             'regex_match' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+        ],
+        'role' => [
+            'in_list' => 'Role must be either alumni or university.',
         ],
     ];
 
