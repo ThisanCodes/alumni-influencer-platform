@@ -217,9 +217,13 @@ const MyProfile = () => {
     try {
       const draft = drafts[section.key];
       const payload = section.fields.reduce((next, field) => {
-        next[field.name] = draft[field.name];
+        next[field.name] = field.type === "date" && draft[field.name] === "" ? null : draft[field.name];
         return next;
       }, {});
+
+      if (section.key === "employment" && payload.is_current) {
+        payload.end_date = null;
+      }
 
       if (draft.id) {
         await api.put(`${section.endpoint}/${draft.id}`, payload);

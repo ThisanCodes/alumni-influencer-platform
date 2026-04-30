@@ -50,6 +50,7 @@ class EmploymentHistoryController extends ResourceController
     {
         $data = $this->request->getJSON(true) ?? [];
         $data = $this->sanitizeInput($data);
+        $data = $this->normalizePayload($data);
 
         $data['user_id'] = $this->userId;
 
@@ -68,6 +69,7 @@ class EmploymentHistoryController extends ResourceController
     {
         $data = $this->request->getJSON(true) ?? [];
         $data = $this->sanitizeInput($data);
+        $data = $this->normalizePayload($data);
 
         $employment = $this->employmentHistoryModel->findForUser($id, $this->userId);
 
@@ -102,5 +104,18 @@ class EmploymentHistoryController extends ResourceController
             'status' => true,
             'message' => 'Employment history deleted successfully.',
         ]);
+    }
+
+    private function normalizePayload(array $data): array
+    {
+        if (array_key_exists('end_date', $data) && trim((string) $data['end_date']) === '') {
+            $data['end_date'] = null;
+        }
+
+        if (!empty($data['is_current'])) {
+            $data['end_date'] = null;
+        }
+
+        return $data;
     }
 }
