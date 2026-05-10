@@ -34,7 +34,8 @@
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
-          "email": { "type": "string", "format": "email" }
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["alumni", "university"], "default": "alumni" }
         }
       },
       "AlumniProfile": {
@@ -78,6 +79,28 @@
             }
           }
         ]
+      },
+      "AlumniProfileSummary": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AlumniProfile" },
+          {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string", "format": "email", "nullable": true },
+              "latest_degree": { "type": "string", "nullable": true },
+              "latest_degree_graduation_date": { "type": "string", "format": "date", "nullable": true },
+              "current_industry": { "type": "string", "nullable": true }
+            }
+          }
+        ]
+      },
+      "AlumniFilterOptions": {
+        "type": "object",
+        "properties": {
+          "programmes": { "type": "array", "items": { "type": "string" } },
+          "industries": { "type": "array", "items": { "type": "string" } },
+          "graduation_years": { "type": "array", "items": { "type": "string", "pattern": "^\\d{4}$" } }
+        }
       },
       "Degree": {
         "type": "object",
@@ -245,17 +268,27 @@
       "FeaturedAlumnus": {
         "type": "object",
         "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
           "first_name": { "type": "string" },
           "last_name": { "type": "string" },
           "bio": { "type": "string", "nullable": true },
           "linkedin_url": { "type": "string", "format": "uri", "nullable": true },
-          "profile_image": { "type": "string", "nullable": true }
+          "profile_image": { "type": "string", "nullable": true },
+          "winning_bid_amount": { "type": "number", "format": "float", "nullable": true },
+          "featured_at": { "type": "string", "format": "date-time", "nullable": true },
+          "degrees": { "type": "array", "items": { "$ref": "#/components/schemas/Degree" } },
+          "certifications": { "type": "array", "items": { "$ref": "#/components/schemas/Certification" } },
+          "licences": { "type": "array", "items": { "$ref": "#/components/schemas/Licence" } },
+          "courses": { "type": "array", "items": { "$ref": "#/components/schemas/Course" } },
+          "employment_history": { "type": "array", "items": { "$ref": "#/components/schemas/EmploymentHistory" } }
         }
       },
       "ApiKey": {
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
           "name": { "type": "string" },
           "key_prefix": { "type": "string", "description": "First 8 characters of the key for identification" },
           "abilities": { "type": "string" },
@@ -302,6 +335,52 @@
             }
           }
         ]
+      },
+      "AnalyticsKpi": {
+        "type": "object",
+        "properties": {
+          "total_alumni": { "type": "integer" },
+          "active_bidders": { "type": "integer" },
+          "bids_this_month": { "type": "integer" },
+          "featured_profile": { "type": "string" }
+        }
+      },
+      "ProgrammeCount": {
+        "type": "object",
+        "properties": {
+          "programme": { "type": "string" },
+          "count": { "type": "integer" }
+        }
+      },
+      "YearCount": {
+        "type": "object",
+        "properties": {
+          "year": { "type": "integer" },
+          "count": { "type": "integer" }
+        }
+      },
+      "CurriculumSkillsGapByProgramme": {
+        "type": "object",
+        "properties": {
+          "programme": { "type": "string" },
+          "avg_certifications": { "type": "integer" },
+          "avg_licences": { "type": "integer" },
+          "avg_courses": { "type": "integer" }
+        }
+      },
+      "EmployerCount": {
+        "type": "object",
+        "properties": {
+          "sector": { "type": "string", "description": "Current employer/company name." },
+          "count": { "type": "integer" }
+        }
+      },
+      "JobTitleCount": {
+        "type": "object",
+        "properties": {
+          "job_title": { "type": "string" },
+          "count": { "type": "integer" }
+        }
       }
     }
   },
@@ -310,7 +389,8 @@
       "get": {
         "tags": ["Public"],
         "summary": "Get today's featured alumnus",
-        "description": "Returns the profile of the currently featured Alumni of the Day. No authentication required.",
+        "description": "Returns the profile of the currently featured Alumni of the Day. Requires an API key with the read:alumni_of_day ability.",
+        "security": [{ "apiKeyAuth": [] }],
         "responses": {
           "200": {
             "description": "Featured alumnus found",
@@ -354,7 +434,8 @@
                 "required": ["email", "password"],
                 "properties": {
                   "email": { "type": "string", "format": "email", "description": "Must be a university email (iit.ac.lk)" },
-                  "password": { "type": "string", "minLength": 8, "description": "Must contain uppercase, lowercase, digit, and special character" }
+                  "password": { "type": "string", "minLength": 8, "description": "Must contain uppercase, lowercase, digit, and special character" },
+                  "role": { "type": "string", "enum": ["alumni", "university"], "default": "alumni" }
                 }
               }
             }
@@ -716,8 +797,11 @@
       "get": {
         "tags": ["Alumni Profile"],
         "summary": "Get full profile with all credentials",
-        "description": "Returns the profile along with degrees, certifications, licences, courses, employment history, and event participations.",
-        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "description": "Returns a profile along with degrees, certifications, licences, courses, employment history, and event participations. Requires an API key with the read:alumni ability.",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": false, "schema": { "type": "integer" }, "description": "Optional alumni user ID. Defaults to the API key owner's user ID." }
+        ],
         "responses": {
           "200": {
             "description": "Full profile data",
@@ -734,6 +818,64 @@
             }
           },
           "404": { "description": "Profile not found" }
+        }
+      }
+    },
+    "/profile/all": {
+      "get": {
+        "tags": ["Alumni Profile"],
+        "summary": "List alumni profiles",
+        "description": "Returns alumni profile summaries for directory/search use. Requires an API key with the read:alumni ability.",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Search first name, last name, or email." },
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } },
+          { "name": "industry", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alumni profile summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/AlumniProfileSummary" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/profile/filter-options": {
+      "get": {
+        "tags": ["Alumni Profile"],
+        "summary": "Get alumni directory filter options",
+        "description": "Returns available programmes, industries, and graduation years for alumni directory filters. Requires an API key with the read:alumni ability.",
+        "security": [{ "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Available filter options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/AlumniFilterOptions" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
         }
       }
     },
@@ -974,6 +1116,120 @@
         "responses": { "200": { "description": "Event participation deleted" }, "404": { "description": "Not found" } }
       }
     },
+    "/analytics/kpi": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get analytics KPI totals",
+        "description": "Returns high-level platform KPIs. Requires an API key with the read:analytics ability.",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "KPI totals", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyticsKpi" } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/alumni-by-programme": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get alumni count by programme",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Alumni counts by programme", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProgrammeCount" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/certifications-over-time": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get certification trends over time",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Certification counts by completion year", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/YearCount" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/curriculum-skills-gap-by-programme": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get curriculum skills gap by programme",
+        "description": "Returns average certification, licence, and course counts by programme.",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Average credentials by programme", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CurriculumSkillsGapByProgramme" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/top-employers": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get top current employers",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Current employer counts", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/EmployerCount" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/job-titles": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get current job title distribution",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Current job title counts", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/JobTitleCount" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
+    "/analytics/graduation-trends": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get graduation trends",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "programme", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "graduation_year", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^\\d{4}$" } }
+        ],
+        "responses": {
+          "200": { "description": "Graduation counts by year", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/YearCount" } } } } },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "API key lacks the required ability" }
+        }
+      }
+    },
     "/bids": {
       "post": {
         "tags": ["Bidding"],
@@ -1058,6 +1314,7 @@
     { "name": "Courses", "description": "Course completion records" },
     { "name": "Employment History", "description": "Employment history records" },
     { "name": "Event Participations", "description": "University event participation records (affects monthly bid limit)" },
+    { "name": "Analytics", "description": "API-key-protected alumni and platform analytics" },
     { "name": "Bidding", "description": "Alumni of the Day bidding system" }
   ]
 }
